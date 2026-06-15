@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Gyűjtés">
+  <title>Gyűjtés — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head"><div><h1>Gyűjtés</h1><div class="subtitle">Az Admin API adatainak helyi szinkronizálása</div></div></div>
+
+        <div id="key-warning"></div>
+
+        <div class="grid cols-4" id="sources"></div>
+
+        <div class="card mt-24"><div class="card-head"><h2>Visszamenőleges gyűjtés (backfill)</h2></div>
+          <div class="card-body">
+            <div class="toolbar" style="margin:0;border:none;box-shadow:none;padding:0">
+              <div class="field"><label>Forrás</label>
+                <select id="bf-source">
+                  <option value="usage">Használat</option>
+                  <option value="cost">Költség</option>
+                  <option value="claude_code">Claude Code</option>
+                </select></div>
+              <div class="field"><label>Kezdő dátum</label><input type="date" id="bf-start"></div>
+              <div class="field"><label>Záró dátum</label><input type="date" id="bf-end"></div>
+              <button class="btn btn-primary" id="backfill-btn"><span class="material-icons">history</span> Backfill indítása</button>
+            </div>
+            <p class="muted mt-16" style="font-size:12px">A backfill háttérben fut és idempotens — a meglévő adatok felülíródnak, nem duplikálódnak.</p>
+          </div></div>
+
+        <div class="card mt-24"><div class="card-head"><h2>Futások előzménye</h2><span class="muted" style="font-size:12px">automatikus frissítés</span></div>
+          <div class="card-body"><div class="table-wrap"><table class="data" id="runs-table"></table></div></div></div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/sync.js"></script>
+</body>
+</html>

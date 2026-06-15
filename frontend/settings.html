@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Beállítások">
+  <title>Beállítások — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head"><div><h1>Beállítások</h1><div class="subtitle">Az automatikus gyűjtés ütemezése</div></div></div>
+
+        <div class="card" style="max-width:640px"><div class="card-head"><h2>Ütemező</h2></div>
+          <div class="card-body" id="form">
+            <div class="form-row"><label>Automatikus gyűjtés</label>
+              <select id="scheduler.enabled"><option value="true">Bekapcsolva</option><option value="false">Kikapcsolva</option></select></div>
+            <div class="grid cols-2">
+              <div class="form-row"><label>Használat gyűjtési intervallum (perc)</label><input type="number" min="1" id="scheduler.usage_interval_min"></div>
+              <div class="form-row"><label>Költség gyűjtési intervallum (perc)</label><input type="number" min="1" id="scheduler.cost_interval_min"></div>
+              <div class="form-row"><label>Claude Code intervallum (perc)</label><input type="number" min="1" id="scheduler.claude_code_interval_min"></div>
+              <div class="form-row"><label>Metaadat intervallum (perc)</label><input type="number" min="1" id="scheduler.metadata_interval_min"></div>
+            </div>
+            <div class="form-row"><label>Gördülő ablak (nap) — minden futáskor ennyi napra visszamenőleg újragyűjt</label><input type="number" min="0" id="scheduler.rolling_window_days"></div>
+            <p class="muted" style="font-size:12px">Az Admin API percenként egyszer kérdezhető fenntartható módon — ne állíts 1 percnél sűrűbbet.</p>
+            <div class="row"><button class="btn btn-primary" id="save"><span class="material-icons">save</span> Mentés</button></div>
+          </div></div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/settings.js"></script>
+</body>
+</html>

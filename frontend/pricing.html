@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Árjegyzék">
+  <title>Árjegyzék — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head">
+          <div><h1>Árjegyzék</h1><div class="subtitle">Modell-árak (USD / 1M token) a <a href="/cost">Költség</a> oldal becsült költségéhez. A minta a <code>model</code> előtag-illesztéséhez (a leghosszabb illeszkedő nyer), így a dátum-utótagos id-k is illeszkednek.</div></div>
+          <div class="row" style="gap:8px">
+            <button class="btn" id="refresh-official"><span class="material-icons">cloud_download</span> Frissítés a hivatalos árlistából</button>
+            <button class="btn" id="add-row"><span class="material-icons">add</span> Új modell</button>
+            <button class="btn btn-primary" id="save"><span class="material-icons">save</span> Mentés</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="table-wrap"><table class="data" id="pricing-table"><tbody><tr><td class="loading">Betöltés…</td></tr></tbody></table></div>
+          </div>
+        </div>
+
+        <div class="card mt-24">
+          <div class="card-head"><h2>Egyéb árak</h2></div>
+          <div class="card-body">
+            <div class="form-row" style="max-width:380px">
+              <label>Web keresés ára (USD / kérés)</label>
+              <input type="number" step="0.001" min="0" id="ws-price" style="max-width:160px">
+              <div class="muted" style="font-size:12px;margin-top:4px">Hivatalos: $10 / 1000 keresés = 0.01 USD/kérés.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="muted" style="font-size:12px;margin-top:14px;line-height:1.6">
+          A „Frissítés a hivatalos árlistából" gomb letölti és értelmezi a
+          <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">platform.claude.com pricing</a>
+          oldalt, és a javasolt értékeket betölti a rácsba (sárga = módosul, zöld = új) — de <b>nem ment</b> automatikusan.
+          Nézd át, majd a <b>Mentés</b> gombbal rögzítsd.
+        </div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/pricing.js"></script>
+</body>
+</html>

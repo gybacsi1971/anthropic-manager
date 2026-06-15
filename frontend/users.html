@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Felhasználók">
+  <title>Felhasználók — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head">
+          <div><h1>Felhasználók</h1><div class="subtitle">Hozzáférés és szerepkörök kezelése</div></div>
+          <button class="btn btn-primary" id="add-user"><span class="material-icons">person_add</span> Új felhasználó</button>
+        </div>
+        <div class="card"><div class="card-body"><div class="table-wrap"><table class="data" id="users-table"><tbody><tr><td class="loading">Betöltés…</td></tr></tbody></table></div></div></div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/users.js"></script>
+</body>
+</html>

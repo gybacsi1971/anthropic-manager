@@ -1,0 +1,80 @@
+# Anthropic Manager — PROD (Docker-host, dedikált nem-root user), Traefik reverse proxy mögött.
+# A változók a .env-ből jönnek; a `:?` szintaxis kötelezővé teszi őket (NO FALLBACK).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: anthropic-manager-db
+    restart: always
+    environment:
+      - POSTGRES_DB=anthropic_manager
+      - POSTGRES_USER=anthropic_manager
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD kotelezo az .env-ben}"
+      - TZ=Europe/Budapest
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anthropic_manager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: anthropic-manager
+    restart: always
+    # A host dockeruser UID/GID-jével fut (a referencia mintája). Az alkalmazás
+    # nem ír a lemezre (a DB külön konténer), de a non-root futás biztonságosabb.
+    user: "${HOST_UID:?HOST_UID kotelezo az .env-ben}:${HOST_GID:?HOST_GID kotelezo az .env-ben}"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TZ=Europe/Budapest
+      # Fernet titkosító kulcs az Admin API kulcsok DB-tárolásához. KÖTELEZŐ.
+      - "API_KEY_ENCRYPTION_KEY=${API_KEY_ENCRYPTION_KEY:?Hianyzo API_KEY_ENCRYPTION_KEY az .env-bol, l. docs/installation.md}"
+      - DATABASE_URL=postgresql://anthropic_manager:${POSTGRES_PASSWORD}@db:5432/anthropic_manager
+      # Opcionális kényelmi import: induláskor DB-be kerül (Fernet, idempotens).
+      - ANTHROPIC_ADMIN_KEY=${ANTHROPIC_ADMIN_KEY:-}
+      # Opcionális alapértelmezett admin (csak üres DB-nél, első induláskor).
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_NAME=${ADMIN_NAME:-}
+      # Környezet-badge (opcionális, üresen nem jelenik meg).
+      - ENV_TYPE=${ENV_TYPE:-}
+      - ENV_COLOR=${ENV_COLOR:-}
+    networks:
+      - traefik
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.${TRAEFIK_ROUTER_NAME:?}.rule=Host(`${TRAEFIK_HOST:?}`)"
+      - "traefik.http.routers.${TRAEFIK_ROUTER_NAME:?}.entrypoints=websecure"
+      - "traefik.http.routers.${TRAEFIK_ROUTER_NAME:?}.tls=true"
+      - "traefik.http.routers.${TRAEFIK_ROUTER_NAME:?}.tls.certresolver=le"
+      - "traefik.http.services.${TRAEFIK_ROUTER_NAME:?}.loadbalancer.server.port=8000"
+      # Per-IP rate-limit: általános DoS/abuse-védelem (a login brute-force-t
+      # elsődlegesen az app-szintű fiók-zárolás kezeli — l. auth.py). A burst elég
+      # nagy a normál böngészéshez (egy oldal több statikus assetet tölt).
+      # Megj.: a kliens-IP helyes felismeréséhez a Traefik entrypoint
+      # forwardedHeaders/ipStrategy beállítása szükséges (Traefik static config).
+      - "traefik.http.middlewares.${TRAEFIK_ROUTER_NAME:?}-ratelimit.ratelimit.average=60"
+      - "traefik.http.middlewares.${TRAEFIK_ROUTER_NAME:?}-ratelimit.ratelimit.burst=100"
+      - "traefik.http.routers.${TRAEFIK_ROUTER_NAME:?}.middlewares=${TRAEFIK_ROUTER_NAME:?}-ratelimit"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/version')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  pgdata:
+
+networks:
+  traefik:
+    external: true
+  internal:

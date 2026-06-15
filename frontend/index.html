@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Áttekintés">
+  <title>Áttekintés — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+  <script src="/vendor/chart.js/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head">
+          <div><h1>Áttekintés</h1><div class="subtitle">Szervezeti használat és költség összegzése</div></div>
+        </div>
+
+        <div class="card" id="balance-card" style="margin-bottom:24px"><div class="card-body" id="balance-body"><div class="loading">Betöltés…</div></div></div>
+
+        <div class="toolbar">
+          <div class="field"><label>Kezdő dátum</label><input type="date" id="start"></div>
+          <div class="field"><label>Záró dátum</label><input type="date" id="end"></div>
+          <div class="field"><label>Gyors tartomány</label><div class="quick-ranges">
+            <button class="btn btn-sm" data-days="7">7 nap</button>
+            <button class="btn btn-sm" data-days="30">30 nap</button>
+            <button class="btn btn-sm" data-days="90">90 nap</button>
+          </div></div>
+          <button class="btn btn-primary" id="apply"><span class="material-icons">refresh</span> Frissítés</button>
+        </div>
+
+        <div class="grid cols-4" id="kpis"></div>
+
+        <div class="grid cols-2 mt-24">
+          <div class="card"><div class="card-head"><h2>Napi költség (USD)</h2></div>
+            <div class="card-body"><div class="chart-box"><canvas id="cost-chart"></canvas></div></div></div>
+          <div class="card"><div class="card-head"><h2>Napi token-felhasználás modellenként</h2></div>
+            <div class="card-body"><div class="chart-box"><canvas id="token-chart"></canvas></div><div class="legend" id="token-legend"></div></div></div>
+        </div>
+
+        <div class="grid cols-2 mt-24">
+          <div class="card"><div class="card-head"><h2>Top modellek költség szerint</h2></div>
+            <div class="card-body"><div class="chart-box small"><canvas id="model-doughnut"></canvas></div><div class="legend" id="model-legend"></div></div></div>
+          <div class="card"><div class="card-head"><h2>Adatfrissesség</h2></div>
+            <div class="card-body" id="freshness"><div class="loading">Betöltés…</div></div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

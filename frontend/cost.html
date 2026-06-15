@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Költség">
+  <title>Költség — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+  <script src="/vendor/chart.js/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head"><div><h1>Költség</h1><div class="subtitle">USD költség bontásban — tényleges (Cost API) és becsült (a mai/nyitott napokra a token-forgalomból). A becslés a szerkeszthető <a href="/pricing">Árjegyzék</a> alapján készül.</div></div></div>
+
+        <div class="toolbar">
+          <div class="field"><label>Kezdő dátum</label><input type="date" id="start"></div>
+          <div class="field"><label>Záró dátum</label><input type="date" id="end"></div>
+          <div class="field"><label>Gyors</label><div class="quick-ranges">
+            <button class="btn btn-sm" data-days="7">7 nap</button>
+            <button class="btn btn-sm" data-days="30">30 nap</button>
+            <button class="btn btn-sm" data-days="90">90 nap</button></div></div>
+          <div class="field"><label>Csoportosítás</label>
+            <select id="group_by">
+              <option value="model" selected>Modell</option>
+              <option value="workspace_id">Workspace</option>
+              <option value="api_key_id">API kulcs</option>
+              <option value="cost_type">Költségtípus</option>
+              <option value="token_type">Token típus</option>
+              <option value="service_tier">Service tier</option>
+              <option value="none">Nincs (összes)</option>
+            </select></div>
+          <button class="btn btn-primary" id="apply"><span class="material-icons">refresh</span> Frissítés</button>
+        </div>
+
+        <div class="grid cols-4" id="kpis"></div>
+
+        <div class="card mt-24"><div class="card-head"><h2>Napi költség (USD) — tényleges + becsült</h2></div>
+          <div class="card-body"><div class="chart-box"><canvas id="ts-chart"></canvas></div><div class="legend" id="ts-legend"></div>
+            <div class="muted" id="ts-note" style="margin-top:8px;font-size:12px;line-height:1.55"></div></div></div>
+
+        <div class="card mt-24"><div class="card-head"><h2>Cache hatékonyság (becsült)</h2></div>
+          <div class="card-body"><div class="grid cols-4" id="cache-kpis"></div>
+            <div class="muted" id="cache-note" style="margin-top:8px;font-size:12px;line-height:1.55"></div></div></div>
+
+        <div class="grid cols-2 mt-24">
+          <div class="card"><div class="card-head"><h2>Megoszlás</h2></div>
+            <div class="card-body"><div class="chart-box small"><canvas id="bd-doughnut"></canvas></div><div class="legend" id="bd-legend"></div></div></div>
+          <div class="card"><div class="card-head"><h2>Részletek</h2></div>
+            <div class="card-body"><div class="table-wrap"><table class="data" id="bd-table"></table></div></div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/cost.js"></script>
+</body>
+</html>

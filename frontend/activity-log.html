@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="page-title" content="Tevékenységnapló">
+  <title>Tevékenységnapló — Anthropic Manager</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/vendor/fonts/inter.css">
+  <link rel="stylesheet" href="/vendor/fonts/material-icons.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="app-sidebar"></aside>
+    <div class="main">
+      <header class="topbar" id="app-header"></header>
+      <main class="content">
+        <div class="page-head"><div><h1>Tevékenységnapló</h1><div class="subtitle">Audit napló a rendszer műveleteiről</div></div></div>
+
+        <div class="toolbar">
+          <div class="field"><label>Művelet szűrő</label><input type="text" id="action" placeholder="pl. login, sync_run"></div>
+          <button class="btn btn-primary" id="apply"><span class="material-icons">search</span> Szűrés</button>
+        </div>
+
+        <div class="card"><div class="card-body">
+          <div class="table-wrap"><table class="data" id="log-table"></table></div>
+          <div class="row mt-16"><span class="muted" id="page-info"></span><div class="spacer"></div>
+            <button class="btn btn-sm" id="prev">Előző</button><button class="btn btn-sm" id="next">Következő</button></div>
+        </div></div>
+      </main>
+    </div>
+  </div>
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/activity-log.js"></script>
+</body>
+</html>
