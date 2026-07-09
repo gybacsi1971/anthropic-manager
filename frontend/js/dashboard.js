@@ -95,22 +95,26 @@ window.pageInit = async function () {
     const p = { start, end };
     if (viewer) { await loadViewer(p); return; }
 
-    let cost, usage, cc, costTs, tokTs, modelBd, status;
+    let cost, usage, cc, costTs, estModelTs, tokTs, status;
     try {
-      [cost, usage, cc, costTs, tokTs, modelBd, status] = await Promise.all([
+      [cost, usage, cc, costTs, estModelTs, tokTs, status] = await Promise.all([
         api.costSummary(p), api.usageSummary(p), api.ccSummary(p),
-        api.costTimeseries({ ...p, group_by: 'none' }),
+        // A folyó napot (pl. ma) a Cost API nem adja → combined (tényleges + becsült)
+        // idősor, hogy a mai nap becsült oszlopként megjelenjen (a néző ággal egyezően).
+        api.costCombinedTimeseries({ ...p, group_by: 'none' }),
+        api.costCombinedTimeseries({ ...p, group_by: 'model' }),
         api.usageTimeseries({ ...p, group_by: 'model', metric: 'total_tokens' }),
-        api.costBreakdown({ ...p, group_by: 'model' }),
         api.syncStatus(),
       ]);
     } catch (e) { toast(e.message, 'error'); return; }
 
-    renderKpis(cost, usage, cc);
+    renderKpis(cost, usage, cc, costTs);
     renderLineChart('cost-chart', costTs.labels, costTs.series, { format: 'usd' });
     renderStackedBar('token-chart', tokTs.labels, tokTs.series, { format: 'tokens' });
     renderLegend('token-legend', tokTs.series);
-    const top = (modelBd || []).slice(0, 8);
+    const top = (estModelTs.series || [])
+      .map((s) => ({ label: s.label, value: (s.data || []).reduce((a, b) => a + b, 0) }))
+      .sort((a, b) => b.value - a.value).slice(0, 8);
     renderDoughnut('model-doughnut', top.map((x) => ({ label: x.label, value: x.value })), { format: 'usd' });
     renderLegend('model-legend', top.map((x) => ({ label: x.label })));
     renderFreshness(status);
@@ -131,7 +135,7 @@ window.pageInit = async function () {
     document.getElementById('kpis').innerHTML =
       kpi('trending_up', 'Becsült költség', fmtUSD(estTs.estimated_total_usd || 0), 'az árlistából, a hatókörödben') +
       kpi('data_usage', 'Összes token', fmtTokens(usage.total_tokens), `${fmtTokens(usage.input)} be · ${fmtTokens(usage.output)} ki`) +
-      kpi('terminal', 'Claude Code költség', fmtUSD(cc.cost_usd), `${cc.actors} fejlesztő`) +
+      kpi('terminal', 'Claude Code költség', fmtUSD(cc.cost_usd), cc.actors > 0 ? `${cc.actors} fejlesztő` : 'nincs Claude Code telemetria') +
       kpi('travel_explore', 'Web keresés', fmtInt(usage.web_search), 'szerveroldali kérés');
     renderLineChart('cost-chart', estTs.labels, estTs.series, { format: 'usd' });
     renderStackedBar('token-chart', tokTs.labels, tokTs.series, { format: 'tokens' });
@@ -149,11 +153,17 @@ window.pageInit = async function () {
             <div class="value">${value}</div>${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ''}</div>`;
   }
 
-  function renderKpis(cost, usage, cc) {
+  function renderKpis(cost, usage, cc, est) {
+    // "Összes költség" = tényleges (cost_facts). A combined idősorból hozzávesszük a
+    // nyitott napok (pl. ma) becsült összegét — külön feltüntetve (nincs csendes 0).
+    const estOpen = (est && est.estimated_total_usd) || 0;
+    const unpriced = (est && est.unpriced_models) || [];
+    let costSub = estOpen > 0 ? `+ ${fmtUSD(estOpen)} becsült (nyitott nap)` : '';
+    if (unpriced.length) costSub += `${costSub ? ' · ' : ''}⚠ árazatlan: ${unpriced.join(', ')}`;
     document.getElementById('kpis').innerHTML =
-      kpi('payments', 'Összes költség', fmtUSD(cost.total_usd)) +
+      kpi('payments', 'Összes költség', fmtUSD(cost.total_usd), costSub) +
       kpi('data_usage', 'Összes token', fmtTokens(usage.total_tokens), `${fmtTokens(usage.input)} be · ${fmtTokens(usage.output)} ki`) +
-      kpi('terminal', 'Claude Code költség', fmtUSD(cc.cost_usd), `${cc.actors} fejlesztő`) +
+      kpi('terminal', 'Claude Code költség', fmtUSD(cc.cost_usd), cc.actors > 0 ? `${cc.actors} fejlesztő` : 'nincs Claude Code telemetria') +
       kpi('travel_explore', 'Web keresés', fmtInt(usage.web_search), 'szerveroldali kérés');
   }
 

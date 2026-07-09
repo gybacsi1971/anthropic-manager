@@ -18,11 +18,28 @@ window.pageInit = async function () {
       ]);
     } catch (e) { toast(e.message, 'error'); return; }
 
+    renderEmptyNotice(summary, lb);
     renderKpis(summary);
     document.getElementById('ts-title').textContent = metricLabel(metric) + ' – napi';
     renderLineChart('ts-chart', ts.labels, ts.series, { format: metric === 'cost' ? 'usd' : 'tokens' });
     renderAcceptance(acc);
     renderLeaderboard(lb);
+  }
+
+  // Az Anthropic org-szintű Claude Code riportja üres lehet (a sessionök nem ezen az
+  // orgon át hitelesítenek) — ez nem sync-hiba, ezért néma 0-k helyett jelezzük.
+  function renderEmptyNotice(s, lb) {
+    const el = document.getElementById('cc-empty');
+    const noData = !lb.length && !s.actors && !s.sessions && !s.lines_added && !s.commits;
+    if (!noData) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
+    el.innerHTML = `<div class="card"><div class="card-body">
+      <div class="label" style="font-size:13px"><span class="material-icons">info</span> Nincs Claude Code telemetria ehhez a szervezethez</div>
+      <div class="muted" style="font-size:12.5px;margin-top:6px">
+        Az Anthropic Admin API a <code>usage_report/claude_code</code> végponton üres adatot ad erre a szervezetre (a sync sikeres, de nincs mit tárolni).
+        Ez általában azt jelenti, hogy a Claude Code munkamenetek <b>nem ezen a szervezeten keresztül</b> hitelesítenek (pl. személyes fiók / más előfizetés),
+        vagy a szervezetnél nincs Claude Code analitika. Ellenőrizd az Anthropic <b>Console → Usage / Claude Code</b> oldalon.
+      </div></div></div>`;
   }
 
   function metricLabel(m) {
