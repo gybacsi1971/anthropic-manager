@@ -24,6 +24,20 @@ function _tooltipFmt(format) {
   };
 }
 
+// X-tengely dátumcímkék: MINDEN nap látszódjon (nincs autoSkip), függőlegesen, tömör
+// "MM-DD" formában. A labels tömb változatlan marad, így a tooltip a teljes dátumot mutatja.
+function _dateTicks(labels) {
+  return {
+    autoSkip: false,
+    maxRotation: 90,
+    minRotation: 90,
+    callback: (val, idx) => {
+      const l = labels[idx] || '';
+      return /^\d{4}-\d{2}-\d{2}$/.test(l) ? l.slice(5) : l;
+    },
+  };
+}
+
 function renderLineChart(canvasId, labels, series, { format = 'tokens', stacked = false } = {}) {
   destroyChart(canvasId);
   const ctx = document.getElementById(canvasId);
@@ -50,7 +64,7 @@ function renderLineChart(canvasId, labels, series, { format = 'tokens', stacked 
         tooltip: { callbacks: { label: _tooltipFmt(format) } },
       },
       scales: {
-        x: { stacked, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        x: { stacked, grid: { display: false }, ticks: _dateTicks(labels) },
         y: { stacked, beginAtZero: true, ticks: { callback: _tickFmt(format) }, grid: { color: '#eceae3' } },
       },
     },
@@ -114,7 +128,7 @@ function renderStackedBar(canvasId, labels, series, { format = 'tokens', estimat
       layout: { padding: { top: estimatedDays ? 14 : 0 } },
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: _tooltipFmt(format) } } },
       scales: {
-        x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        x: { stacked: true, grid: { display: false }, ticks: _dateTicks(labels) },
         y: { stacked: true, beginAtZero: true, ticks: { callback: _tickFmt(format) }, grid: { color: '#eceae3' } },
       },
     },
