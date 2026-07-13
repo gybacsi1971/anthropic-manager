@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, HTTPException
 
 import scope
 from database import get_db
-from query_helpers import parse_date_range, assemble_timeseries
+from query_helpers import parse_date_range, day_range, assemble_timeseries
 
 router = APIRouter(prefix="/api/claude-code", tags=["claude-code"])
 
@@ -63,7 +63,7 @@ def timeseries(request: Request, start: str, end: str, metric: str = "sessions")
                 FROM claude_code_facts WHERE {where} GROUP BY day ORDER BY day""",
             [s, e, *cp],
         ).fetchall()
-    days, ordered = assemble_timeseries([dict(r) for r in rows])
+    days, ordered = assemble_timeseries([dict(r) for r in rows], day_range(start, end))
     series = [{"key": g, "label": g, "data": vals} for g, vals in ordered]
     return {"labels": days, "series": series, "metric": metric}
 

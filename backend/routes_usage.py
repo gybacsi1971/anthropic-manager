@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Query, HTTPException
 import scope
 from database import get_db
 from query_helpers import (
-    parse_range, safe_group_column, assemble_timeseries, resolve_labels, GROUP_SENTINELS,
+    parse_range, day_range, safe_group_column, assemble_timeseries, resolve_labels, GROUP_SENTINELS,
 )
 
 router = APIRouter(prefix="/api/usage", tags=["usage"])
@@ -101,7 +101,7 @@ def timeseries(request: Request, start: str, end: str, group_by: str = "none",
                     FROM usage_facts WHERE {where} GROUP BY day ORDER BY day""",
                 [s, e, *fp],
             ).fetchall()
-    days, ordered = assemble_timeseries([dict(r) for r in rows])
+    days, ordered = assemble_timeseries([dict(r) for r in rows], day_range(start, end))
     labels = resolve_labels(group_by, [g for g, _ in ordered]) if gcol else {}
     series = [{"key": g, "label": labels.get(g, g), "data": vals} for g, vals in ordered]
     return {"labels": days, "series": series, "metric": metric, "group_by": group_by}

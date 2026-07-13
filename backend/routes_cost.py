@@ -9,7 +9,7 @@ import settings_service
 from database import get_db
 from pricing_service import EST_USD_EXPR as _EST_USD, PRICE_JOIN_LATERAL as _PRICE_JOIN, WS_PRICE_SETTING
 from query_helpers import (
-    parse_range, safe_group_column, assemble_timeseries, resolve_labels, GROUP_SENTINELS,
+    parse_range, day_range, safe_group_column, assemble_timeseries, resolve_labels, GROUP_SENTINELS,
 )
 
 router = APIRouter(prefix="/api/cost", tags=["cost"])
@@ -121,7 +121,7 @@ def timeseries(request: Request, start: str, end: str, group_by: str = "none",
                     FROM cost_facts WHERE {where} GROUP BY day ORDER BY day""",
                 [s, e, *fp],
             ).fetchall()
-    days, ordered = assemble_timeseries([dict(r) for r in rows])
+    days, ordered = assemble_timeseries([dict(r) for r in rows], day_range(start, end))
     labels = resolve_labels(group_by, [g for g, _ in ordered]) if gcol else {}
     series = [{"key": g, "label": labels.get(g, g), "data": vals} for g, vals in ordered]
     return {"labels": days, "series": series, "group_by": group_by, "unit": "USD"}
@@ -240,12 +240,13 @@ def combined_timeseries(request: Request, start: str, end: str, group_by: str = 
             ).fetchall()]
 
     # --- MERGE: naponként a tényleges nyer; ahol nincs, a becsült tölti ki ---
-    est_by_key, est_days = {}, set()
+    est_by_key = {}
     for r in est_rows:
-        est_days.add(r["day"])
         est_by_key[(r["day"], r["grp"])] = float(r["val"] or 0)
-    used_est_days = {d for d in est_days if d not in actual_day_set}
-    all_days = sorted(actual_day_set | used_est_days)
+    # A tengely a kért tartomány MINDEN napja (a mai is), nem csak az adatos napok. Ahol
+    # nincs tényleges adat, becsültnek jelöljük — a 0-forgalmú napokon a becsült érték is
+    # 0, tehát láthatatlan oszlop, de a tengely a mai napig ér.
+    all_days = day_range(start, end)
     estimated_flags = [d not in actual_day_set for d in all_days]
 
     groups: dict = {}
