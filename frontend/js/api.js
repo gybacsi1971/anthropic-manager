@@ -73,6 +73,7 @@ const api = {
   syncBackfill: (source, start, end) => apiRequest('/sync/backfill', { method: 'POST', body: JSON.stringify({ source, start, end }) }),
   syncRuns: (limit = 50) => apiRequest(`/sync/runs${buildQuery({ limit })}`),
   syncStatus: () => apiRequest('/sync/status'),
+  syncRunRows: (runId, p) => apiRequest(`/sync/runs/${runId}/rows${buildQuery(p)}`),
 
   // Usage
   usageSummary: (p) => apiRequest(`/usage/summary${buildQuery(p)}`),

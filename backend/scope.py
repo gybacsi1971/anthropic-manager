@@ -56,6 +56,30 @@ def usage_scope_clause(scope, prefix: str = ""):
     return "(" + " OR ".join(parts) + ")", params
 
 
+def workspaces_scope_clause(scope):
+    """workspaces — a hozzárendelt workspace VAGY a hozzárendelt kulcsok workspace-e.
+
+    Visszaad: (clause, params). admin → ("", []); hatókör nélküli viewer → a
+    klauzula üres eredményt ad (ANY üres tömbön mindig hamis).
+    """
+    if scope is None:
+        return "", []
+    return ("(id = ANY(%s) OR id IN (SELECT workspace_id FROM org_api_keys WHERE id = ANY(%s)))",
+            [scope["workspace_ids"], scope["api_key_ids"]])
+
+
+def api_keys_scope_clause(scope):
+    """org_api_keys — a hozzárendelt kulcs VAGY a hozzárendelt workspace kulcsai.
+
+    Visszaad: (clause, params). admin → ("", []); hatókör nélküli viewer → a
+    klauzula üres eredményt ad.
+    """
+    if scope is None:
+        return "", []
+    return ("(id = ANY(%s) OR workspace_id = ANY(%s))",
+            [scope["api_key_ids"], scope["workspace_ids"]])
+
+
 def claude_code_scope_clause(scope, con):
     """claude_code_facts — nincs api_key_id/workspace_id, csak actor_email / actor_api_key_name.
 

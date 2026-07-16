@@ -244,6 +244,8 @@ table.data .muted { color: var(--muted); }
 .form-row label { font-size: 13px; font-weight: 500; }
 .form-row input, .form-row select { width: 100%; }
 .modal.modal-wide { max-width: 640px; }
+.modal.modal-xl { max-width: 95vw; width: 95vw; height: 85vh; display: flex; flex-direction: column; }
+.modal.modal-xl .modal-body { flex: 1; overflow-y: auto; }
 
 /* ---------------- Footer (verzió) — globális, teljes szélességű ---------------- */
 .app-footer {

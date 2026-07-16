@@ -13,19 +13,13 @@ def workspaces(request: Request):
     # A szűrő-legördülő a nézőnek csak a hatókörébe eső workspace-eket mutatja
     # (közvetlenül hozzárendelt VAGY a hozzárendelt kulcsok workspace-e).
     scp = scope.current_scope(request)
+    cl, cp = scope.workspaces_scope_clause(scp)
+    where = f" WHERE {cl}" if cl else ""
     with get_db() as con:
-        if scp is None:
-            rows = con.execute(
-                "SELECT id, name, display_color, archived_at FROM workspaces ORDER BY name NULLS LAST"
-            ).fetchall()
-        else:
-            rows = con.execute(
-                """SELECT id, name, display_color, archived_at FROM workspaces
-                   WHERE id = ANY(%s)
-                      OR id IN (SELECT workspace_id FROM org_api_keys WHERE id = ANY(%s))
-                   ORDER BY name NULLS LAST""",
-                (list(scp["workspace_ids"]), list(scp["api_key_ids"])),
-            ).fetchall()
+        rows = con.execute(
+            f"SELECT id, name, display_color, archived_at FROM workspaces{where} ORDER BY name NULLS LAST",
+            cp,
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -33,18 +27,13 @@ def workspaces(request: Request):
 def api_keys(request: Request):
     # Nézőnek csak a hozzárendelt (vagy a hozzárendelt workspace-hez tartozó) kulcsok.
     scp = scope.current_scope(request)
+    cl, cp = scope.api_keys_scope_clause(scp)
+    where = f" WHERE {cl}" if cl else ""
     with get_db() as con:
-        if scp is None:
-            rows = con.execute(
-                "SELECT id, name, workspace_id, status FROM org_api_keys ORDER BY name NULLS LAST"
-            ).fetchall()
-        else:
-            rows = con.execute(
-                """SELECT id, name, workspace_id, status FROM org_api_keys
-                   WHERE id = ANY(%s) OR workspace_id = ANY(%s)
-                   ORDER BY name NULLS LAST""",
-                (list(scp["api_key_ids"]), list(scp["workspace_ids"])),
-            ).fetchall()
+        rows = con.execute(
+            f"SELECT id, name, workspace_id, status FROM org_api_keys{where} ORDER BY name NULLS LAST",
+            cp,
+        ).fetchall()
     return [dict(r) for r in rows]
 
 

@@ -6,7 +6,8 @@ from fastapi import APIRouter, Request, HTTPException
 import auth
 import admin_key_service
 import collector
-from database import get_db
+import scope
+from database import get_db, now_iso
 from query_helpers import parse_range
 from activity_logger import log_activity
 from schemas import SyncRunRequest, BackfillRequest
@@ -15,6 +16,16 @@ router = APIRouter(prefix="/api/sync", tags=["sync"])
 
 VALID_SOURCES = ("usage", "cost", "claude_code", "metadata")
 RANGED_SOURCES = ("usage", "cost", "claude_code")
+
+# forrás → (ténytábla, rendezés-oszlop)
+FACT_TABLES = {
+    "usage": ("usage_facts", "bucket_start"),
+    "cost": ("cost_facts", "bucket_start"),
+    "claude_code": ("claude_code_facts", "day"),
+}
+METADATA_TABLES = ("workspaces", "org_api_keys", "org_members")
+METADATA_ORDER = {"workspaces": "name NULLS LAST", "org_api_keys": "name NULLS LAST",
+                   "org_members": "email NULLS LAST"}
 
 
 def _run_bg(source, trigger, start=None, end=None):
@@ -91,3 +102,70 @@ def status(request: Request):
         "metadata": metadata,
         "active_key": admin_key_service.has_active_key(),
     }
+
+
+def _metadata_scope_clause(table: str, scp):
+    if table == "workspaces":
+        return scope.workspaces_scope_clause(scp)
+    if table == "org_api_keys":
+        return scope.api_keys_scope_clause(scp)
+    return "", []  # org_members: nincs hatókör-szűrés (l. routes_metadata.members)
+
+
+@router.get("/runs/{run_id}/rows")
+def run_rows(run_id: int, request: Request, table: str = None, limit: int = 50, offset: int = 0):
+    """Egy adott gyűjtés-futás által érintett ténysorok, lapozva, néző hatókörével szűrve."""
+    auth.get_current_user(request)
+    scp = scope.current_scope(request)
+    limit = min(max(limit, 1), 200)
+
+    with get_db() as con:
+        run = con.execute("SELECT * FROM sync_runs WHERE id = %s", (run_id,)).fetchone()
+        if not run:
+            raise HTTPException(404, "Nincs ilyen gyűjtés-futás")
+        run = dict(run)
+        end_bound = run["finished_at"] or now_iso()
+
+        if run["source"] == "metadata":
+            tbl = table or "org_api_keys"
+            if tbl not in METADATA_TABLES:
+                raise HTTPException(400, "Érvénytelen tábla")
+            table_counts = {}
+            for t in METADATA_TABLES:
+                cl, cp = _metadata_scope_clause(t, scp)
+                w = "synced_at BETWEEN %s AND %s" + (f" AND {cl}" if cl else "")
+                table_counts[t] = con.execute(
+                    f"SELECT COUNT(*) AS n FROM {t} WHERE {w}", [run["started_at"], end_bound, *cp]
+                ).fetchone()["n"]
+            cl, cp = _metadata_scope_clause(tbl, scp)
+            where = "synced_at BETWEEN %s AND %s" + (f" AND {cl}" if cl else "")
+            params = [run["started_at"], end_bound, *cp]
+            rows = [dict(r) for r in con.execute(
+                f"SELECT * FROM {tbl} WHERE {where} ORDER BY {METADATA_ORDER[tbl]} LIMIT %s OFFSET %s",
+                [*params, limit, offset],
+            ).fetchall()]
+            return {"run": run, "source": "metadata", "table": tbl, "table_counts": table_counts,
+                    "rows": rows, "total": table_counts[tbl], "limit": limit, "offset": offset}
+
+        if run["source"] == "cost" and scp is not None:
+            # A cost_facts-nak nincs api_key_id oszlopa, ezért a néző (bármilyen
+            # hatókörrel) itt sem lát tényleges költséget — l. routes_cost.py.
+            return {"run": run, "source": "cost", "table": None, "table_counts": None,
+                    "rows": [], "total": 0, "limit": limit, "offset": offset, "viewer_blocked": True}
+
+        fact_table, order_col = FACT_TABLES[run["source"]]
+        if run["source"] == "usage":
+            scl, sp = scope.usage_scope_clause(scp)
+        elif run["source"] == "claude_code":
+            scl, sp = scope.claude_code_scope_clause(scp, con)
+        else:
+            scl, sp = "", []
+        where = "collected_at BETWEEN %s AND %s" + (f" AND {scl}" if scl else "")
+        params = [run["started_at"], end_bound, *sp]
+        total = con.execute(f"SELECT COUNT(*) AS n FROM {fact_table} WHERE {where}", params).fetchone()["n"]
+        rows = [dict(r) for r in con.execute(
+            f"SELECT * FROM {fact_table} WHERE {where} ORDER BY {order_col} LIMIT %s OFFSET %s",
+            [*params, limit, offset],
+        ).fetchall()]
+        return {"run": run, "source": run["source"], "table": None, "table_counts": None,
+                "rows": rows, "total": total, "limit": limit, "offset": offset}
