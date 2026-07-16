@@ -196,7 +196,11 @@ class AnthropicAdminClient:
             data = resp.get("data", [])
             for item in data:
                 yield item
-            if resp.get("has_more") and resp.get("last_id"):
+            if resp.get("has_more"):
+                if not resp.get("last_id"):
+                    raise RuntimeError(
+                        f"Admin API lapozási hiba: has_more=true, de last_id hiányzik ({path})"
+                    )
                 after_id = resp["last_id"]
             else:
                 break

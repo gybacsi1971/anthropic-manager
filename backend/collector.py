@@ -19,7 +19,7 @@ from dateutil import parser as dtparser
 
 import admin_key_service
 from anthropic_admin_client import AnthropicAdminClient
-from database import get_db, advisory_lock, now_iso
+from database import get_db, advisory_lock, now_iso, savepoint
 from settings_service import get_setting
 
 
@@ -355,47 +355,65 @@ def collect_claude_code(client: AnthropicAdminClient, day: str) -> int:
 # METAADATOK (workspaces / api_keys / members)
 # ================================================================
 
-def collect_metadata(client: AnthropicAdminClient) -> int:
+def collect_metadata(client: AnthropicAdminClient) -> tuple[int, list[str]]:
+    """Visszaad: (sikeresen upsert-elt sorok száma, hibaüzenetek listája).
+
+    Minden sor saját SAVEPOINT-ban fut: egy hibás rekord (pl. érvénytelen
+    mező) csak azt az egy sort görgeti vissza, a többi feldolgozása folytatódik.
+    """
     count = 0
+    errors: list[str] = []
     ts = now_iso()
     with get_db() as con:
         for ws in client.iter_workspaces(include_archived=True):
-            con.execute(
-                """INSERT INTO workspaces (id, name, display_color, archived_at, created_at, raw, synced_at)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s)
-                   ON CONFLICT (id) DO UPDATE SET
-                       name = EXCLUDED.name, display_color = EXCLUDED.display_color,
-                       archived_at = EXCLUDED.archived_at, created_at = EXCLUDED.created_at,
-                       raw = EXCLUDED.raw, synced_at = EXCLUDED.synced_at""",
-                (ws.get("id"), ws.get("name"), ws.get("display_color"),
-                 ws.get("archived_at"), ws.get("created_at"), json.dumps(ws), ts),
-            )
-            count += 1
+            try:
+                with savepoint(con):
+                    con.execute(
+                        """INSERT INTO workspaces (id, name, display_color, archived_at, created_at, raw, synced_at)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (id) DO UPDATE SET
+                               name = EXCLUDED.name, display_color = EXCLUDED.display_color,
+                               archived_at = EXCLUDED.archived_at, created_at = EXCLUDED.created_at,
+                               raw = EXCLUDED.raw, synced_at = EXCLUDED.synced_at""",
+                        (ws.get("id"), ws.get("name"), ws.get("display_color"),
+                         ws.get("archived_at"), ws.get("created_at"), json.dumps(ws), ts),
+                    )
+                count += 1
+            except Exception as e:
+                errors.append(f"workspace {ws.get('id')}: {e}")
 
         for k in client.iter_api_keys():
-            con.execute(
-                """INSERT INTO org_api_keys (id, name, workspace_id, status, partial_key_hint, created_at, raw, synced_at)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                   ON CONFLICT (id) DO UPDATE SET
-                       name = EXCLUDED.name, workspace_id = EXCLUDED.workspace_id,
-                       status = EXCLUDED.status, partial_key_hint = EXCLUDED.partial_key_hint,
-                       created_at = EXCLUDED.created_at, raw = EXCLUDED.raw, synced_at = EXCLUDED.synced_at""",
-                (k.get("id"), k.get("name"), k.get("workspace_id"), k.get("status"),
-                 k.get("partial_key_hint"), k.get("created_at"), json.dumps(k), ts),
-            )
-            count += 1
+            try:
+                with savepoint(con):
+                    con.execute(
+                        """INSERT INTO org_api_keys (id, name, workspace_id, status, partial_key_hint, created_at, raw, synced_at)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (id) DO UPDATE SET
+                               name = EXCLUDED.name, workspace_id = EXCLUDED.workspace_id,
+                               status = EXCLUDED.status, partial_key_hint = EXCLUDED.partial_key_hint,
+                               created_at = EXCLUDED.created_at, raw = EXCLUDED.raw, synced_at = EXCLUDED.synced_at""",
+                        (k.get("id"), k.get("name"), k.get("workspace_id"), k.get("status"),
+                         k.get("partial_key_hint"), k.get("created_at"), json.dumps(k), ts),
+                    )
+                count += 1
+            except Exception as e:
+                errors.append(f"api_key {k.get('id')}: {e}")
 
         for m in client.iter_members():
-            con.execute(
-                """INSERT INTO org_members (id, email, name, role, raw, synced_at)
-                   VALUES (%s,%s,%s,%s,%s,%s)
-                   ON CONFLICT (id) DO UPDATE SET
-                       email = EXCLUDED.email, name = EXCLUDED.name, role = EXCLUDED.role,
-                       raw = EXCLUDED.raw, synced_at = EXCLUDED.synced_at""",
-                (m.get("id"), m.get("email"), m.get("name"), m.get("role"), json.dumps(m), ts),
-            )
-            count += 1
-    return count
+            try:
+                with savepoint(con):
+                    con.execute(
+                        """INSERT INTO org_members (id, email, name, role, raw, synced_at)
+                           VALUES (%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (id) DO UPDATE SET
+                               email = EXCLUDED.email, name = EXCLUDED.name, role = EXCLUDED.role,
+                               raw = EXCLUDED.raw, synced_at = EXCLUDED.synced_at""",
+                        (m.get("id"), m.get("email"), m.get("name"), m.get("role"), json.dumps(m), ts),
+                    )
+                count += 1
+            except Exception as e:
+                errors.append(f"member {m.get('id')}: {e}")
+    return count, errors
 
 
 # ================================================================
@@ -500,7 +518,17 @@ def run_sync(source: str, trigger: str = "manual",
                 elif source == "claude_code":
                     total = _sync_claude_code_range(client, starting_at, ending_at)
                 else:
-                    total = collect_metadata(client)
+                    total, meta_errors = collect_metadata(client)
+                    if meta_errors:
+                        preview = "; ".join(meta_errors[:5])
+                        summary = f"{len(meta_errors)} sor kihagyva: {preview}"
+                        if total == 0:
+                            raise RuntimeError(summary)
+                        # Részleges siker: a jó sorok bekerültek, a hibásak logolva —
+                        # nem görgetjük vissza az egészet egy rossz rekord miatt.
+                        _finish_run(run_id, "partial", total, summary)
+                        return {"ok": True, "rows": total, "run_id": run_id, "source": source,
+                                "status": "partial", "error": summary}
             _finish_run(run_id, "ok", total)
             return {"ok": True, "rows": total, "run_id": run_id, "source": source}
         except Exception as e:

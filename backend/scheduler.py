@@ -52,11 +52,13 @@ async def _tick():
         last = _last_run.get(source)
         if last is not None and (now - last).total_seconds() < interval_min * 60:
             continue
-        _last_run[source] = now
         try:
             result = await asyncio.to_thread(collector.run_sync, source, "scheduler")
             logger.info("Ütemezett sync %s: %s", source, result)
+            _last_run[source] = now
         except Exception as e:
+            # Hiba esetén NEM frissítjük _last_run-t, hogy a következő tick-kor
+            # (60 mp múlva) azonnal újrapróbálkozzon, ne a teljes intervallum után.
             logger.error("Ütemezett sync %s hiba: %s", source, e)
 
 

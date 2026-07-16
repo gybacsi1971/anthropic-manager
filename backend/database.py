@@ -80,6 +80,25 @@ def get_db():
         pool.putconn(raw_conn)
 
 
+_savepoint_counter = 0
+
+
+@contextmanager
+def savepoint(con: PgConnection):
+    """SAVEPOINT egy get_db()-tranzakción belül: egy sor hibája nem viszi el az
+    egész tranzakciót — csak az adott sor INSERT-je gördül vissza."""
+    global _savepoint_counter
+    _savepoint_counter += 1
+    name = f"sp_{_savepoint_counter}"
+    con.execute(f"SAVEPOINT {name}")
+    try:
+        yield
+        con.execute(f"RELEASE SAVEPOINT {name}")
+    except Exception:
+        con.execute(f"ROLLBACK TO SAVEPOINT {name}")
+        raise
+
+
 # ================================================================
 # Postgres advisory lock — folyamatok közti gyűjtés-zár
 # ================================================================
