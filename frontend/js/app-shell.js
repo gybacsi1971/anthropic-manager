@@ -158,14 +158,14 @@ async function renderFooter() {
   });
 }
 
-// marked.js lusta betöltése (csak a modal első megnyitásakor; CSP engedi a jsdelivr-t).
+// marked.js lusta betöltése (csak a modal első megnyitásakor; self-hosted, /vendor alól).
 let _markedLoading = null;
 function _ensureMarked() {
   if (typeof marked !== 'undefined') return Promise.resolve();
   if (_markedLoading) return _markedLoading;
   _markedLoading = new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js';
+    s.src = '/vendor/marked/marked.min.js';
     s.onload = () => { marked.use({ gfm: true, breaks: true }); resolve(); };
     s.onerror = () => reject(new Error('marked.js nem tölthető be'));
     document.head.appendChild(s);
