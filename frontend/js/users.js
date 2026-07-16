@@ -112,26 +112,22 @@ window.pageInit = async function () {
     const wsName = {};
     workspaces.forEach((w) => { wsName[w.id] = w.name || w.id; });
 
-    const listStyle = 'max-height:190px;overflow:auto;border:1px solid var(--border,#e3e3e3);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:5px';
-    const itemStyle = 'display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;margin:0';
-    const groupStyle = 'font-weight:600;font-size:12px;color:var(--muted);margin-top:6px';
-
-    let wsHtml = `<div class="form-row"><label>Workspace-ek (a teljes workspace forgalma)</label><div style="${listStyle}">`;
-    if (!workspaces.length) wsHtml += '<div class="muted">Nincs workspace adat (futtass metaadat-gyűjtést).</div>';
+    let wsHtml = `<div class="form-row"><label>Workspace-ek (a teljes workspace forgalma)</label><div class="scope-list">`;
+    if (!workspaces.length) wsHtml += '<div class="muted scope-list-empty">Nincs workspace adat (futtass metaadat-gyűjtést).</div>';
     for (const w of workspaces) {
-      wsHtml += `<label style="${itemStyle}"><input type="checkbox" data-ws="${escapeHtml(w.id)}"${selWs.has(w.id) ? ' checked' : ''}> ${escapeHtml(w.name || w.id)}</label>`;
+      wsHtml += `<label class="scope-list-item"><input type="checkbox" data-ws="${escapeHtml(w.id)}"${selWs.has(w.id) ? ' checked' : ''}> ${escapeHtml(w.name || w.id)}</label>`;
     }
     wsHtml += '</div></div>';
 
     const byWs = {};
     for (const k of keys) { (byWs[k.workspace_id || ''] = byWs[k.workspace_id || ''] || []).push(k); }
-    let keyHtml = `<div class="form-row"><label>API kulcsok</label><div style="${listStyle}">`;
-    if (!keys.length) keyHtml += '<div class="muted">Nincs API kulcs adat (futtass metaadat-gyűjtést).</div>';
+    let keyHtml = `<div class="form-row"><label>API kulcsok</label><div class="scope-list">`;
+    if (!keys.length) keyHtml += '<div class="muted scope-list-empty">Nincs API kulcs adat (futtass metaadat-gyűjtést).</div>';
     for (const [wsId, list] of Object.entries(byWs)) {
-      keyHtml += `<div style="${groupStyle}">${escapeHtml(wsName[wsId] || wsId || '(nincs workspace)')}</div>`;
+      keyHtml += `<div class="scope-list-group">${escapeHtml(wsName[wsId] || wsId || '(nincs workspace)')}</div>`;
       for (const k of list) {
         const st = k.status && k.status !== 'active' ? ` <span class="muted">(${escapeHtml(k.status)})</span>` : '';
-        keyHtml += `<label style="${itemStyle}"><input type="checkbox" data-key="${escapeHtml(k.id)}"${selKeys.has(k.id) ? ' checked' : ''}> ${escapeHtml(k.name || k.id)}${st}</label>`;
+        keyHtml += `<label class="scope-list-item"><input type="checkbox" data-key="${escapeHtml(k.id)}"${selKeys.has(k.id) ? ' checked' : ''}> ${escapeHtml(k.name || k.id)}${st}</label>`;
       }
     }
     keyHtml += '</div></div>';
@@ -144,6 +140,6 @@ window.pageInit = async function () {
       const workspace_ids = [...overlay.querySelectorAll('input[data-ws]:checked')].map((el) => el.dataset.ws);
       await api.setUserScope(u.id, { api_key_ids, workspace_ids });
       toast('Hatókör mentve', 'success');
-    }, 'Mentés');
+    }, 'Mentés', false, 'modal-wide');
   }
 };

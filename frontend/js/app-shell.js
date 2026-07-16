@@ -197,7 +197,7 @@ async function showVersionHistoryModal(history) {
 }
 
 // ---- Modal ----
-function showModal(title, bodyHtml, onConfirm, confirmLabel = 'Mentés', danger = false) {
+function showModal(title, bodyHtml, onConfirm, confirmLabel = 'Mentés', danger = false, extraClass = '') {
   let overlay = document.getElementById('modal-overlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -207,7 +207,7 @@ function showModal(title, bodyHtml, onConfirm, confirmLabel = 'Mentés', danger 
   }
   const okClass = danger ? 'btn-danger' : 'btn-primary';
   overlay.innerHTML = `
-    <div class="modal">
+    <div class="modal${extraClass ? ' ' + extraClass : ''}">
       <div class="modal-head"><h3>${escapeHtml(title)}</h3><button class="btn btn-ghost btn-sm" id="modal-x"><span class="material-icons">close</span></button></div>
       <div class="modal-body">${bodyHtml}</div>
       <div class="modal-foot"><button class="btn" id="modal-cancel">Mégse</button><button class="btn ${okClass}" id="modal-ok">${escapeHtml(confirmLabel)}</button></div>
