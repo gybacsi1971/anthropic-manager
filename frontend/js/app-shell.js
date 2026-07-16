@@ -62,12 +62,10 @@ function renderSidebar() {
 function renderHeader() {
   const el = document.getElementById('app-header');
   if (!el) return;
-  const title = document.querySelector('meta[name="page-title"]')?.content || 'Anthropic Manager';
   const initials = ((currentUser && currentUser.name) || '?').trim().charAt(0).toUpperCase();
   el.innerHTML = `
     <div class="row">
       <button class="menu-toggle btn btn-ghost"><span class="material-icons">menu</span></button>
-      <span class="page-title">${escapeHtml(title)}</span>
     </div>
     <div class="right">
       <span id="env-badge"></span>
